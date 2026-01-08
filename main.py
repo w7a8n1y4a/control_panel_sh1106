@@ -1,9 +1,11 @@
+import gc
 import machine
-import time
+import ubinascii
 
-from lib.sh1106 import SH1106_I2C
+import sh1106
 
 from pepeunit_micropython_client.client import PepeunitClient
+from pepeunit_micropython_client.enums import SearchTopicType, SearchScope
 
 
 display = None
@@ -22,7 +24,7 @@ def init_display(client):
             sda=machine.Pin(client.settings.PIN_SDA),
             freq=client.settings.I2C_FREQUENCY
         )
-    display = SH1106_I2C(
+    display = sh1106.SH1106_I2C(
             client.settings.DISPLAY_WIDTH,
             client.settings.DISPLAY_HEIGHT,
             i2c,
@@ -30,12 +32,45 @@ def init_display(client):
             addr=parse_i2c_address(client.settings.I2C_ADDRESS)
         )
     display.fill(0)
+    gc.collect()
 
 def output_handler(client: PepeunitClient):
     pass
 
+def _decode_full_frame_base64(payload_str, expected_size):
+    if payload_str is None:
+        raise ValueError("empty payload")
+
+    s = payload_str.strip()
+    if not s:
+        raise ValueError("empty payload")
+
+    raw = ubinascii.a2b_base64(s)
+    if len(raw) != expected_size:
+        raise ValueError("bad frame size: got %d, expected %d" % (len(raw), expected_size))
+    return raw
+
 def input_handler(client: PepeunitClient, msg):
-    pass
+    parts = msg.topic.split('/')
+
+    if len(parts) == 3:
+        topic_name = client.schema.find_topic_by_unit_node(parts[1], SearchTopicType.UNIT_NODE_UUID, SearchScope.INPUT)
+
+        if topic_name == 'full_frame/pepeunit':
+            global display
+            if display is None:
+                return
+
+            try:
+                payload_str = msg.payload if isinstance(msg.payload, str) else str(msg.payload)
+                frame = _decode_full_frame_base64(payload_str, display.bufsize)
+                display.renderbuf[:] = frame
+                display.show(True)
+            except Exception as e:
+                try:
+                    client.logger.warning("full_frame decode/show error: %s" % (e,), file_only=True)
+                except Exception:
+                    pass
 
 
 def main(client: PepeunitClient):
@@ -48,7 +83,6 @@ def main(client: PepeunitClient):
 
     global display
 
-    time.sleep_ms(750)
     display.sleep(False)
     display.fill(0)
     display.text("Hello World", 0, 0, 1)

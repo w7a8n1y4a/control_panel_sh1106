@@ -1,5 +1,4 @@
 import gc
-import sh1106
 
 from pepeunit_micropython_client.client import PepeunitClient
 

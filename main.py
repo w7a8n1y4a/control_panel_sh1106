@@ -2,7 +2,6 @@ import gc
 import machine
 import ubinascii
 import time
-
 import sh1106
 
 from pepeunit_micropython_client.client import PepeunitClient
@@ -73,6 +72,10 @@ def input_handler(client: PepeunitClient, msg):
                 w = display.width
                 pages = display.pages
                 prev = display._prev_frame  # noqa: SLF001
+                # Only build per-page ranges when the change is small enough to be worth it.
+                # Most frames change almost the whole screen, and range-finding + short writes
+                # don't help much there but add overhead.
+                ranges = None
                 if not display._prev_frame_valid:  # noqa: SLF001
                     pages_to_update = (1 << pages) - 1
                     display.renderbuf[:] = frame
@@ -80,17 +83,50 @@ def input_handler(client: PepeunitClient, msg):
                     display._prev_frame_valid = True  # noqa: SLF001
                 else:
                     pages_to_update = 0
+                    frame_mv = memoryview(frame)
+                    prev_mv = memoryview(prev)
                     for page in range(pages):
                         start = page * w
                         end = start + w
-                        if frame[start:end] != prev[start:end]:
+                        # Compare via memoryview to avoid allocating bytes slices.
+                        if frame_mv[start:end] != prev_mv[start:end]:
                             pages_to_update |= 1 << page
-                            display.renderbuf[start:end] = frame[start:end]
-                            prev[start:end] = frame[start:end]
+                            # Fast path: if edges differ, treat it as a full-page change.
+                            if frame_mv[start] != prev_mv[start] and frame_mv[end - 1] != prev_mv[end - 1]:
+                                display.renderbuf[start:end] = frame_mv[start:end]
+                                prev[start:end] = frame_mv[start:end]
+                                continue
+
+                            # Find minimal changed column range within this page (inclusive bounds).
+                            x0 = 0
+                            while x0 < w and frame_mv[start + x0] == prev_mv[start + x0]:
+                                x0 += 1
+                            x1 = w - 1
+                            while x1 >= x0 and frame_mv[start + x1] == prev_mv[start + x1]:
+                                x1 -= 1
+                            n = (x1 - x0 + 1)
+
+                            # If almost the whole page changed, don't bother with ranges.
+                            if n >= (w - 8):
+                                display.renderbuf[start:end] = frame_mv[start:end]
+                                prev[start:end] = frame_mv[start:end]
+                            else:
+                                if ranges is None:
+                                    ranges = {}
+                                ranges[page] = (x0, x1)
+                                seg_start = start + x0
+                                seg_end = start + x1 + 1
+                                display.renderbuf[seg_start:seg_end] = frame_mv[seg_start:seg_end]
+                                prev[seg_start:seg_end] = frame_mv[seg_start:seg_end]
 
                 three = time.ticks_ms()
                 if pages_to_update:
                     display.pages_to_update = pages_to_update
+                    if ranges is not None and display._prev_frame_valid:  # noqa: SLF001
+                        try:
+                            display._page_ranges = ranges  # noqa: SLF001
+                        except Exception:
+                            pass
                     display.show(False)
                 four = time.ticks_ms()
 
@@ -100,7 +136,24 @@ def input_handler(client: PepeunitClient, msg):
                     updated_pages += (m & 1)
                     m >>= 1
 
-                print(f"{one} - {inc} - {two} - {three} - {four} : {two-one} + {three-two} + {four-three} (pages {updated_pages})")
+                cols = None
+                try:
+                    if pages_to_update and display._prev_frame_valid:  # noqa: SLF001
+                        if ranges is None:
+                            cols = updated_pages * w
+                        else:
+                            cols = (updated_pages * w)
+                            # subtract columns we didn't send for partial pages
+                            for (_p, (x0, x1)) in ranges.items():
+                                n = (x1 - x0 + 1)
+                                cols -= (w - n)
+                except Exception:
+                    cols = None
+
+                if cols is None:
+                    print(f"{one} - {inc} - {two} - {three} - {four} : {two-one} + {three-two} + {four-three} (pages {updated_pages})")
+                else:
+                    print(f"{one} - {inc} - {two} - {three} - {four} : {two-one} + {three-two} + {four-three} (pages {updated_pages}, cols {cols})")
                 inc += 1
             except Exception as e:
                 try:
@@ -132,6 +185,6 @@ if __name__ == '__main__':
         main(client)
     except KeyboardInterrupt:
         raise
-    except Exception as e:
-        client.logger.critical(f"Error with reset: {str(e)}", file_only=True)
-        client.restart_device()
+    # except Exception as e:
+    #     client.logger.critical(f"Error with reset: {str(e)}", file_only=True)
+    #     client.restart_device()

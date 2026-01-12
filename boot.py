@@ -2,6 +2,11 @@ import gc
 
 from pepeunit_micropython_client.client import PepeunitClient
 
+import machine
+
+
+machine.freq(160000000)
+
 print('\n\nRun Init PepeunitClient')
 
 client = PepeunitClient(

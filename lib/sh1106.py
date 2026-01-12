@@ -216,6 +216,24 @@ class SH1106_I2C(SH1106):
             res.init(res.OUT, value=1)
         super().__init__(width, height, external_vcc, rotate)
 
+    def write_frame(self, frame):
+        if len(frame) != self.bufsize:
+            raise ValueError("bad frame size: got %d, expected %d" % (len(frame), self.bufsize))
+
+        w = self.width
+        tx = self._page_tx
+        tx_mv = memoryview(tx)
+        frame_mv = memoryview(frame)
+
+        # 1 I2C transaction per page: [cmds..., 0x40, <width bytes>]
+        for page in range(self.pages):
+            tx[1] = _SET_PAGE_ADDRESS | page
+            tx[3] = _LOW_COLUMN_ADDRESS | 2   # SH1106 column offset
+            tx[5] = _HIGH_COLUMN_ADDRESS | 0
+            start = page * w
+            tx[7:] = frame_mv[start:(start + w)]
+            self.i2c.writeto(self.addr, tx_mv)
+
     def write_cmd(self, *cmds):
         # Support multiple commands per I2C transaction to reduce overhead.
         n = len(cmds)

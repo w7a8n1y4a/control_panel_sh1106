@@ -73,11 +73,12 @@ def input_handler(client: PepeunitClient, msg):
                 return
 
             if client.settings.PU_MIN_LOG_LEVEL == 'Debug':
-                print(f"Frame {frame_count}, Time {time.ticks_ms()}")
+                print(f"Frame {frame_count}, Time {time.ticks_ms()}, Free {gc.mem_free()}, Alloc {gc.mem_alloc()}")
                 frame_count += 1
 
             try:
                 frame = _decode_full_frame_base64(msg.payload, display.bufsize)
+                gc.collect()
                 try:
                     display.write_frame(frame)
                 except AttributeError:

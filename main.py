@@ -10,6 +10,9 @@ from pepeunit_micropython_client.enums import SearchTopicType, SearchScope
 
 display = None
 frame_count = 0
+pending_payload = None
+render_frame = None
+render_page = 0
 
 def parse_i2c_address(value):
     if isinstance(value, str):
@@ -33,10 +36,48 @@ def init_display(client):
             addr=parse_i2c_address(client.settings.I2C_ADDRESS)
         )
     display.fill(0)
-    gc.collect()
 
 def output_handler(client: PepeunitClient):
-    pass
+    global pending_payload, render_frame, render_page
+    global display
+
+    if display is None:
+        return
+
+    if render_frame is not None:
+        try:
+            _write_frame_page(display, render_frame, render_page)
+            render_page += 1
+            if render_page >= display.pages:
+                render_frame = None
+                render_page = 0
+                if gc.mem_free() < 9000:
+                    gc.collect()
+        except Exception as e:
+            render_frame = None
+            render_page = 0
+            try:
+                client.logger.warning("full_frame render error: %s" % (e,), file_only=True)
+            except Exception:
+                pass
+        return
+
+    if pending_payload is None:
+        return
+    payload = pending_payload
+    pending_payload = None
+
+    try:
+        render_frame = _decode_full_frame_base64(payload, display.bufsize)
+        render_page = 0
+        payload = None
+    except Exception as e:
+        render_frame = None
+        render_page = 0
+        try:
+            client.logger.warning("full_frame decode error: %s" % (e,), file_only=True)
+        except Exception:
+            pass
 
 def _decode_full_frame_base64(payload_str, expected_size):
     if payload_str is None:
@@ -51,43 +92,27 @@ def _decode_full_frame_base64(payload_str, expected_size):
         raise ValueError("bad frame size: got %d, expected %d" % (len(raw), expected_size))
     return raw
 
-def _write_frame_direct(display, frame):
+
+def _write_frame_page(display, frame, page):
     w = display.width
-    pages = display.pages
     mv = memoryview(frame)
-    for page in range(pages):
-        display.write_cmd(0xB0 | page, 0x00 | 2, 0x10 | 0)
-        start = page * w
-        display.write_data(mv[start:(start + w)])
+    display.write_cmd(0xB0 | page, 0x00 | 2, 0x10 | 0)
+    start = page * w
+    display.write_data(mv[start:(start + w)])
 
 def input_handler(client: PepeunitClient, msg):
-    global frame_count
-    parts = msg.topic.split('/')
+    global frame_count, pending_payload
+    topics = client.schema.input_topic.get('full_frame/pepeunit')
+    if msg.topic in topics:
+        global display
+        if display is None:
+            return
 
-    if len(parts) == 3:
-        topic_name = client.schema.find_topic_by_unit_node(parts[1], SearchTopicType.UNIT_NODE_UUID, SearchScope.INPUT)
-
-        if topic_name == 'full_frame/pepeunit':
-            global display
-            if display is None:
-                return
-
-            if client.settings.PU_MIN_LOG_LEVEL == 'Debug':
-                print(f"Frame {frame_count}, Time {time.ticks_ms()}, Free {gc.mem_free()}, Alloc {gc.mem_alloc()}")
-                frame_count += 1
-
-            try:
-                frame = _decode_full_frame_base64(msg.payload, display.bufsize)
-                gc.collect()
-                try:
-                    display.write_frame(frame)
-                except AttributeError:
-                    _write_frame_direct(display, frame)
-            except Exception as e:
-                try:
-                    client.logger.warning("full_frame decode/show error: %s" % (e,), file_only=True)
-                except Exception:
-                    pass
+        if client.settings.PU_MIN_LOG_LEVEL == 'Debug':
+            print("Frame", frame_count, "Time", time.ticks_ms(), "Free",
+                  gc.mem_free(), "Alloc", gc.mem_alloc(), "Len", len(msg.payload))
+        frame_count += 1
+        pending_payload = msg.payload
 
 
 def main(client: PepeunitClient):

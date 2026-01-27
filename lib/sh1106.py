@@ -233,6 +233,7 @@ class SH1106_I2C(SH1106):
             start = page * w
             tx[7:] = frame_mv[start:(start + w)]
             self.i2c.writeto(self.addr, tx_mv)
+            time.sleep_ms(0)
 
     def write_cmd(self, *cmds):
         # Support multiple commands per I2C transaction to reduce overhead.
@@ -281,6 +282,8 @@ class SH1106_I2C(SH1106):
         if self.rotate90:
             for i in range(self.bufsize):
                 db[w * (i % p) + (i // p)] = rb[i]
+                if (i & 31) == 31:
+                    time.sleep_ms(0)
 
         if full_update:
             pages_to_update = (1 << self.pages) - 1
@@ -330,6 +333,7 @@ class SH1106_I2C(SH1106):
                     start = page * w
                     tx[7:] = db_mv[start:(start + w)]
                     self.i2c.writeto(self.addr, tx)
+                time.sleep_ms(0)
 
         self.pages_to_update = 0
         if ranges is not None:

@@ -1,18 +1,15 @@
 import gc
 import machine
-import ubinascii
 import sh1106
 import time
+import uasyncio as asyncio
 
 from pepeunit_micropython_client.client import PepeunitClient
-from pepeunit_micropython_client.enums import SearchTopicType, SearchScope
 
 
 display = None
 frame_count = 0
-pending_payload = None
-render_frame = None
-render_page = 0
+FULL_FRAME_TOPICS = ()
 
 def parse_i2c_address(value):
     if isinstance(value, str):
@@ -35,75 +32,79 @@ def init_display(client):
             machine.Pin(16), 
             addr=parse_i2c_address(client.settings.I2C_ADDRESS)
         )
-    display.fill(0)
 
-def output_handler(client: PepeunitClient):
-    global pending_payload, render_frame, render_page
-    global display
+_B64_TABLE = bytearray(256)
+for _i in range(256):
+    _B64_TABLE[_i] = 0xFF
+for _i, _c in enumerate(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"):
+    _B64_TABLE[_c] = _i
+del _i, _c
 
-    if display is None:
-        return
-
-    if render_frame is not None:
-        try:
-            _write_frame_page(display, render_frame, render_page)
-            render_page += 1
-            if render_page >= display.pages:
-                render_frame = None
-                render_page = 0
-                if gc.mem_free() < 9000:
-                    gc.collect()
-        except Exception as e:
-            render_frame = None
-            render_page = 0
-            try:
-                client.logger.warning("full_frame render error: %s" % (e,), file_only=True)
-            except Exception:
-                pass
-        return
-
-    if pending_payload is None:
-        return
-    payload = pending_payload
-    pending_payload = None
-
-    try:
-        render_frame = _decode_full_frame_base64(payload, display.bufsize)
-        render_page = 0
-        payload = None
-    except Exception as e:
-        render_frame = None
-        render_page = 0
-        try:
-            client.logger.warning("full_frame decode error: %s" % (e,), file_only=True)
-        except Exception:
-            pass
-
-def _decode_full_frame_base64(payload_str, expected_size):
-    if payload_str is None:
+def _decode_full_frame_base64_into(payload, out_buf):
+    if payload is None:
         raise ValueError("empty payload")
+    if isinstance(payload, str):
+        payload = payload.strip().encode()
 
-    s = payload_str.strip()
-    if not s:
-        raise ValueError("empty payload")
+    out_idx = 0
+    quad_idx = 0
+    quad0 = 0
+    quad1 = 0
+    quad2 = 0
+    pad = 0
+    seen_pad = False
 
-    raw = ubinascii.a2b_base64(s)
-    if len(raw) != expected_size:
-        raise ValueError("bad frame size: got %d, expected %d" % (len(raw), expected_size))
-    return raw
+    for b in payload:
+        if b <= 32:
+            continue
+        if b == 61:  # '='
+            seen_pad = True
+            pad += 1
+            if pad > 2:
+                raise ValueError("incorrect padding")
+            v = 0
+        else:
+            if seen_pad:
+                raise ValueError("incorrect padding")
+            v = _B64_TABLE[b]
+            if v == 0xFF:
+                raise ValueError("bad base64 char")
+
+        if quad_idx == 0:
+            quad0 = v
+            quad_idx = 1
+            continue
+        if quad_idx == 1:
+            quad1 = v
+            quad_idx = 2
+            continue
+        if quad_idx == 2:
+            quad2 = v
+            quad_idx = 3
+            continue
+
+        out_buf[out_idx] = (quad0 << 2) | (quad1 >> 4)
+        out_idx += 1
+        if pad < 2:
+            out_buf[out_idx] = ((quad1 & 0x0F) << 4) | (quad2 >> 2)
+            out_idx += 1
+        if pad == 0:
+            out_buf[out_idx] = ((quad2 & 0x03) << 6) | v
+            out_idx += 1
+
+        quad_idx = 0
+        pad = 0
+
+    if quad_idx != 0:
+        raise ValueError("incorrect padding")
+    if out_idx != len(out_buf):
+        raise ValueError("bad frame size: got %d, expected %d" % (out_idx, len(out_buf)))
+    return out_buf
 
 
-def _write_frame_page(display, frame, page):
-    w = display.width
-    mv = memoryview(frame)
-    display.write_cmd(0xB0 | page, 0x00 | 2, 0x10 | 0)
-    start = page * w
-    display.write_data(mv[start:(start + w)])
-
-def input_handler(client: PepeunitClient, msg):
-    global frame_count, pending_payload
-    topics = client.schema.input_topic.get('full_frame/pepeunit')
-    if msg.topic in topics:
+async def input_handler(client: PepeunitClient, msg):
+    global frame_count
+    if msg.topic in FULL_FRAME_TOPICS:
         global display
         if display is None:
             return
@@ -112,32 +113,48 @@ def input_handler(client: PepeunitClient, msg):
             print("Frame", frame_count, "Time", time.ticks_ms(), "Free",
                   gc.mem_free(), "Alloc", gc.mem_alloc(), "Len", len(msg.payload))
         frame_count += 1
-        pending_payload = msg.payload
+        try:
+            gc.collect()
+            if gc.mem_free() < 500:
+                return
+            with client.mqtt_client.drop_input():
+                # Decode directly into display.renderbuf — saves 1024 bytes vs separate frame_buf
+                rb = display.renderbuf
+                _decode_full_frame_base64_into(msg.payload, rb)
+                await asyncio.sleep_ms(0)
+                display.render_full_frame(rb)
+        except Exception as e:
+            try:
+                client.logger.warning("full_frame decode error: %s" % (e,), file_only=True)
+            except Exception:
+                pass
 
 
-def main(client: PepeunitClient):
+async def main_async(client: PepeunitClient):
+    global FULL_FRAME_TOPICS
+    FULL_FRAME_TOPICS = client.schema.input_topic.get('full_frame/pepeunit') or ()
+
     client.set_mqtt_input_handler(input_handler)
-    client.mqtt_client.connect()
-    client.subscribe_all_schema_topics()
-    client.set_output_handler(output_handler)
 
+    gc.collect()
+    await client.mqtt_client.connect()
+
+    gc.collect()
+    await client.mqtt_client.subscribe_all_schema_topics()
+    client.set_output_handler(None)
+
+    gc.collect()
     init_display(client)
 
-    global display
-
-    display.sleep(False)
-    display.fill(0)
-    display.text("Run cycle", 0, 0, 1)
-    display.show()
-    
-    client.run_main_cycle()
+    gc.collect()
+    await client.run_main_cycle(10)
 
 
 if __name__ == '__main__':
     try:
-        main(client)
+        asyncio.run(main_async(client))
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        client.logger.critical(f"Error with reset: {str(e)}", file_only=True)
+        client.logger.critical("Error with reset: {}".format(e), file_only=True)
         client.restart_device()

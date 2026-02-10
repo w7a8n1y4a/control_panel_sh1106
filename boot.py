@@ -1,5 +1,7 @@
 import gc
 
+import uasyncio as asyncio
+
 from pepeunit_micropython_client.client import PepeunitClient
 
 import machine
@@ -7,7 +9,7 @@ import machine
 
 machine.freq(160000000)
 
-print('\n\nRun Init PepeunitClient')
+print('\nRun init PepeunitClient')
 
 client = PepeunitClient(
     env_file_path='/env.json',
@@ -16,10 +18,13 @@ client = PepeunitClient(
     ff_wifi_manager_enable=True,
 )
 
-client.wifi_manager.connect_forever()
+async def _boot_init():
+    if client.wifi_manager:
+        await client.wifi_manager.connect_forever()
+    await client.time_manager.sync_epoch_ms_from_ntp()
 
-client.time_manager.sync_epoch_ms_from_ntp()
+asyncio.run(_boot_init())
 
 gc.collect()
 
-client.logger.warning(f'Init Success: free_mem {gc.mem_free()}: alloc_mem {gc.mem_alloc()}', file_only=True)
+client.logger.warning('Init Success: free_mem {}: alloc_mem {}'.format(gc.mem_free(), gc.mem_alloc()), file_only=True)

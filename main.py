@@ -40,65 +40,66 @@ for _i, _c in enumerate(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01
     _B64_TABLE[_c] = _i
 del _i, _c
 
+
+@micropython.viper
+def _viper_b64_decode(data, out, table) -> int:
+    p = ptr8(data)
+    o = ptr8(out)
+    t = ptr8(table)
+    n = int(len(data))
+    oi = 0
+    qi = 0
+    a = 0
+    b = 0
+    c = 0
+    pad = 0
+
+    i = 0
+    while i < n:
+        byte = p[i]
+        i += 1
+        if byte <= 32:
+            continue
+        if byte == 61:
+            v = 0
+            pad += 1
+        else:
+            v = t[byte]
+            if v == 255:
+                continue
+
+        if qi == 0:
+            a = v
+            qi = 1
+        elif qi == 1:
+            b = v
+            qi = 2
+        elif qi == 2:
+            c = v
+            qi = 3
+        else:
+            o[oi] = (a << 2) | (b >> 4)
+            oi += 1
+            if pad < 2:
+                o[oi] = ((b & 0x0F) << 4) | (c >> 2)
+                oi += 1
+            if pad == 0:
+                o[oi] = ((c & 0x03) << 6) | v
+                oi += 1
+            qi = 0
+            pad = 0
+
+    return oi
+
+
 def _decode_full_frame_base64_into(payload, out_buf):
     if payload is None:
         raise ValueError("empty payload")
     if isinstance(payload, str):
         payload = payload.strip().encode()
-
-    out_idx = 0
-    quad_idx = 0
-    quad0 = 0
-    quad1 = 0
-    quad2 = 0
-    pad = 0
-    seen_pad = False
-
-    for b in payload:
-        if b <= 32:
-            continue
-        if b == 61:  # '='
-            seen_pad = True
-            pad += 1
-            if pad > 2:
-                raise ValueError("incorrect padding")
-            v = 0
-        else:
-            if seen_pad:
-                raise ValueError("incorrect padding")
-            v = _B64_TABLE[b]
-            if v == 0xFF:
-                raise ValueError("bad base64 char")
-
-        if quad_idx == 0:
-            quad0 = v
-            quad_idx = 1
-            continue
-        if quad_idx == 1:
-            quad1 = v
-            quad_idx = 2
-            continue
-        if quad_idx == 2:
-            quad2 = v
-            quad_idx = 3
-            continue
-
-        out_buf[out_idx] = (quad0 << 2) | (quad1 >> 4)
-        out_idx += 1
-        if pad < 2:
-            out_buf[out_idx] = ((quad1 & 0x0F) << 4) | (quad2 >> 2)
-            out_idx += 1
-        if pad == 0:
-            out_buf[out_idx] = ((quad2 & 0x03) << 6) | v
-            out_idx += 1
-
-        quad_idx = 0
-        pad = 0
-
-    if quad_idx != 0:
-        raise ValueError("incorrect padding")
-    if out_idx != len(out_buf):
-        raise ValueError("bad frame size: got %d, expected %d" % (out_idx, len(out_buf)))
+    oi = _viper_b64_decode(payload, out_buf, _B64_TABLE)
+    if oi != len(out_buf):
+        raise ValueError("bad frame size: got %d, expected %d" % (oi, len(out_buf)))
     return out_buf
 
 
@@ -114,14 +115,13 @@ async def input_handler(client: PepeunitClient, msg):
                   gc.mem_free(), "Alloc", gc.mem_alloc(), "Len", len(msg.payload))
         frame_count += 1
         try:
-            gc.collect()
+            if gc.mem_free() < 5000:
+                gc.collect()
             if gc.mem_free() < 500:
                 return
             with client.mqtt_client.drop_input():
-                # Decode directly into display.renderbuf — saves 1024 bytes vs separate frame_buf
                 rb = display.renderbuf
                 _decode_full_frame_base64_into(msg.payload, rb)
-                await asyncio.sleep_ms(0)
                 display.render_full_frame(rb)
         except Exception as e:
             try:

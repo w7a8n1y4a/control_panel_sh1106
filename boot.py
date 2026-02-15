@@ -1,5 +1,7 @@
 import gc
 
+import sh1106
+
 import uasyncio as asyncio
 
 from pepeunit_micropython_client.client import PepeunitClient
@@ -15,6 +17,7 @@ client = PepeunitClient(
     env_file_path='/env.json',
     schema_file_path='/schema.json',
     log_file_path='/log.json',
+    ff_version_check_enable=False,
     ff_wifi_manager_enable=True,
     ff_mqtt_log_enable=False,
     ff_file_log_enable=False,

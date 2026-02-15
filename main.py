@@ -3,6 +3,7 @@ import machine
 import sh1106
 import time
 import uasyncio as asyncio
+import ubinascii
 
 from pepeunit_micropython_client.client import PepeunitClient
 
@@ -33,75 +34,6 @@ def init_display(client):
             addr=parse_i2c_address(client.settings.I2C_ADDRESS)
         )
 
-_B64_TABLE = bytearray(256)
-for _i in range(256):
-    _B64_TABLE[_i] = 0xFF
-for _i, _c in enumerate(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"):
-    _B64_TABLE[_c] = _i
-del _i, _c
-
-
-@micropython.viper
-def _viper_b64_decode(data, out, table) -> int:
-    p = ptr8(data)
-    o = ptr8(out)
-    t = ptr8(table)
-    n = int(len(data))
-    oi = 0
-    qi = 0
-    a = 0
-    b = 0
-    c = 0
-    pad = 0
-
-    i = 0
-    while i < n:
-        byte = p[i]
-        i += 1
-        if byte <= 32:
-            continue
-        if byte == 61:
-            v = 0
-            pad += 1
-        else:
-            v = t[byte]
-            if v == 255:
-                continue
-
-        if qi == 0:
-            a = v
-            qi = 1
-        elif qi == 1:
-            b = v
-            qi = 2
-        elif qi == 2:
-            c = v
-            qi = 3
-        else:
-            o[oi] = (a << 2) | (b >> 4)
-            oi += 1
-            if pad < 2:
-                o[oi] = ((b & 0x0F) << 4) | (c >> 2)
-                oi += 1
-            if pad == 0:
-                o[oi] = ((c & 0x03) << 6) | v
-                oi += 1
-            qi = 0
-            pad = 0
-
-    return oi
-
-
-def _decode_full_frame_base64_into(payload, out_buf):
-    if payload is None:
-        raise ValueError("empty payload")
-    if isinstance(payload, str):
-        payload = payload.strip().encode()
-    oi = _viper_b64_decode(payload, out_buf, _B64_TABLE)
-    if oi != len(out_buf):
-        raise ValueError("bad frame size: got %d, expected %d" % (oi, len(out_buf)))
-    return out_buf
-
 
 async def input_handler(client: PepeunitClient, msg):
     global frame_count
@@ -121,7 +53,11 @@ async def input_handler(client: PepeunitClient, msg):
                 return
             with client.mqtt_client.drop_input():
                 rb = display.renderbuf
-                _decode_full_frame_base64_into(msg.payload, rb)
+                decoded = ubinascii.a2b_base64(msg.payload)
+                if len(decoded) != len(rb):
+                    raise ValueError("bad frame size: got %d, expected %d" % (len(decoded), len(rb)))
+                rb[:] = decoded
+                del decoded
                 display.render_full_frame(rb)
         except Exception as e:
             try:

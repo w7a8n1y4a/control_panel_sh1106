@@ -83,7 +83,7 @@ async def main_async(client: PepeunitClient):
     init_display(client)
 
     gc.collect()
-    await client.run_main_cycle(10)
+    await client.run_main_cycle(100)
 
 
 if __name__ == '__main__':

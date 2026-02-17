@@ -73,9 +73,6 @@ async def main_async(client: PepeunitClient):
     client.set_mqtt_input_handler(input_handler)
 
     gc.collect()
-    await client.mqtt_client.connect()
-
-    gc.collect()
     await client.mqtt_client.subscribe_all_schema_topics()
     client.set_output_handler(None)
 

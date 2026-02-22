@@ -12,5 +12,7 @@
     "input_topic": [
         "full_frame/pepeunit"
     ],
-    "output_topic": []
+    "output_topic": [
+        "encoder_action/pepeunit"
+    ]
 }

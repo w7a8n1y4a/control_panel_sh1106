@@ -11,6 +11,10 @@ from pepeunit_micropython_client.client import PepeunitClient
 display = None
 frame_count = 0
 FULL_FRAME_TOPICS = ()
+_controller = None
+
+ENCODER_POLL_MS = 1
+
 
 def parse_i2c_address(value):
     if isinstance(value, str):
@@ -18,6 +22,7 @@ def parse_i2c_address(value):
         if s.startswith("0x"):
             return int(s, 16)
     raise TypeError("I2C_ADDRESS in env.json must be str with format \"0x3c\"")
+
 
 def init_display(client):
     global display
@@ -30,9 +35,50 @@ def init_display(client):
             client.settings.DISPLAY_WIDTH,
             client.settings.DISPLAY_HEIGHT,
             i2c,
-            machine.Pin(16), 
+            machine.Pin(16),
             addr=parse_i2c_address(client.settings.I2C_ADDRESS)
         )
+
+
+async def _publish_encoder_action(client, action):
+    await client.publish_to_topics('encoder_action/pepeunit', action)
+
+
+def init_encoder(client):
+    from encoder import EncoderButton
+
+    pin_button = machine.Pin(int(client.settings.PIN_BUTTON), machine.Pin.IN, machine.Pin.PULL_UP)
+    pin_encoder_clk = machine.Pin(int(client.settings.PIN_ENCODER_CLK), machine.Pin.IN, machine.Pin.PULL_UP)
+    pin_encoder_dt = machine.Pin(int(client.settings.PIN_ENCODER_DT), machine.Pin.IN, machine.Pin.PULL_UP)
+
+    def on_button(kind):
+        asyncio.create_task(_publish_encoder_action(client, kind))
+        return kind
+
+    def on_rotate(direction):
+        asyncio.create_task(_publish_encoder_action(client, direction))
+        return direction
+
+    return EncoderButton(
+        pin_button=pin_button,
+        pin_encoder_clk=pin_encoder_clk,
+        pin_encoder_dt=pin_encoder_dt,
+        encoder_enabled=True,
+        button_debounce_ms=int(client.settings.BUTTON_DEBOUNCE_TIME),
+        button_double_click_ms=int(client.settings.BUTTON_DOUBLE_CLICK_TIME),
+        button_long_press_ms=int(client.settings.BUTTON_LONG_PRESS_TIME),
+        encoder_debounce_ms=int(client.settings.ENCODER_DEBOUNCE_TIME),
+        on_button=on_button,
+        on_rotate=on_rotate,
+    )
+
+
+async def _encoder_poll_task(client, controller):
+    while True:
+        now_ms = client.time_manager.get_epoch_ms()
+        controller.handle_encoder(now_ms)
+        controller.handle_button(now_ms)
+        await asyncio.sleep_ms(ENCODER_POLL_MS)
 
 
 async def input_handler(client: PepeunitClient, msg):
@@ -67,7 +113,7 @@ async def input_handler(client: PepeunitClient, msg):
 
 
 async def main_async(client: PepeunitClient):
-    global FULL_FRAME_TOPICS
+    global FULL_FRAME_TOPICS, _controller
     FULL_FRAME_TOPICS = client.schema.input_topic.get('full_frame/pepeunit') or ()
 
     client.set_mqtt_input_handler(input_handler)
@@ -78,6 +124,11 @@ async def main_async(client: PepeunitClient):
 
     gc.collect()
     init_display(client)
+
+    if client.settings.FF_ENCODER_ENABLE:
+        gc.collect()
+        _controller = init_encoder(client)
+        asyncio.create_task(_encoder_poll_task(client, _controller))
 
     gc.collect()
     await client.run_main_cycle(100)

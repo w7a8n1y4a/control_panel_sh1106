@@ -4,6 +4,7 @@ PORT="${1:-/dev/ttyUSB0}"
 
 ampy -p "$PORT" -b 115200 mkdir ./lib
 ampy -p "$PORT" -b 115200 put ./lib/sh1106.mpy ./lib/sh1106.mpy
+ampy -p "$PORT" -b 115200 put ./lib/encoder.mpy ./lib/encoder.mpy
 ampy -p "$PORT" -b 115200 put ./main.py ./main.py
 ampy -p "$PORT" -b 115200 put ./boot.py ./boot.py
 ampy -p "$PORT" -b 115200 put ./env.json ./env.json

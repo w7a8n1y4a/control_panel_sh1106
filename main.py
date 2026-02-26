@@ -10,7 +10,6 @@ from pepeunit_micropython_client.client import PepeunitClient
 
 display = None
 frame_count = 0
-FULL_FRAME_TOPICS = ()
 _controller = None
 
 ENCODER_POLL_MS = 10
@@ -82,7 +81,8 @@ async def _encoder_poll_task(controller):
 
 async def input_handler(client: PepeunitClient, msg):
     global frame_count
-    if msg.topic in FULL_FRAME_TOPICS:
+    full_frame_topics = client.schema.input_topic.get('full_frame/pepeunit') or ()
+    if msg.topic in full_frame_topics:
         global display
         if display is None:
             return
@@ -112,8 +112,7 @@ async def input_handler(client: PepeunitClient, msg):
 
 
 async def main_async(client: PepeunitClient):
-    global FULL_FRAME_TOPICS, _controller
-    FULL_FRAME_TOPICS = client.schema.input_topic.get('full_frame/pepeunit') or ()
+    global _controller
 
     client.set_mqtt_input_handler(input_handler)
 

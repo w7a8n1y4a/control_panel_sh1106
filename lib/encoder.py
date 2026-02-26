@@ -1,3 +1,7 @@
+import machine
+import time
+
+
 class EncoderButton:
     _ENC_TRANSITIONS = (
         0, -1,  1,  0,
@@ -15,7 +19,6 @@ class EncoderButton:
         button_debounce_ms=20,
         button_double_click_ms=250,
         button_long_press_ms=400,
-        encoder_debounce_ms=20,
         encoder_enabled=True,
         steps_per_detent=4,
         on_button=None,
@@ -31,8 +34,6 @@ class EncoderButton:
         self.button_debounce_ms = int(button_debounce_ms)
         self.button_double_click_ms = int(button_double_click_ms)
         self.button_long_press_ms = int(button_long_press_ms)
-
-        self.encoder_debounce_ms = int(encoder_debounce_ms)
         self.steps_per_detent = int(steps_per_detent)
 
         self.encoder_enabled = bool(encoder_enabled) and (pin_encoder_clk is not None) and (pin_encoder_dt is not None)
@@ -42,24 +43,43 @@ class EncoderButton:
 
         self._enc_last_state = 0
         self._enc_accum = 0
-        self._enc_last_publish_ms = 0
         if self.encoder_enabled:
             a = self.pin_encoder_clk.value()
             b = self.pin_encoder_dt.value()
             self._enc_last_state = (a << 1) | b
+            trigger = machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING
+            self.pin_encoder_clk.irq(trigger=trigger, handler=self._enc_irq)
+            self.pin_encoder_dt.irq(trigger=trigger, handler=self._enc_irq)
 
         raw = self.pin_button.value()
         self._btn_stable = raw
         self._btn_raw_last = raw
         self._btn_raw_change_ms = 0
-
         self._btn_press_start_ms = None
         self._btn_long_fired = False
-
         self._btn_click_count = 0
         self._btn_one_deadline_ms = None
+        self.pin_button.irq(
+            trigger=machine.Pin.IRQ_RISING | machine.Pin.IRQ_FALLING,
+            handler=self._btn_irq,
+        )
 
-    def _commit_short_click(self, count: int):
+    def _enc_irq(self, pin):
+        a = self.pin_encoder_clk.value()
+        b = self.pin_encoder_dt.value()
+        state = (a << 1) | b
+        prev = self._enc_last_state
+        if state != prev:
+            self._enc_last_state = state
+            self._enc_accum += self._ENC_TRANSITIONS[(prev << 2) | state]
+
+    def _btn_irq(self, pin):
+        val = pin.value()
+        if val != self._btn_raw_last:
+            self._btn_raw_last = val
+            self._btn_raw_change_ms = time.ticks_ms()
+
+    def _commit_short_click(self, count):
         if count <= 0:
             return None
         if count == 1:
@@ -68,47 +88,35 @@ class EncoderButton:
             return self.on_button("Double")
         return None
 
-    def handle_encoder(self, now_ms: int):
+    def handle_encoder(self):
         if not self.encoder_enabled:
             return None
 
-        a = self.pin_encoder_clk.value()
-        b = self.pin_encoder_dt.value()
-        state = (a << 1) | b
-        prev = self._enc_last_state
-        if state == prev:
-            return None
-
-        self._enc_last_state = state
-
-        delta = self._ENC_TRANSITIONS[(prev << 2) | state]
-        if delta == 0:
-            return None
-
-        self._enc_accum += delta
-
-        if (now_ms - self._enc_last_publish_ms) < self.encoder_debounce_ms:
-            return None
+        irq_state = machine.disable_irq()
+        accum = self._enc_accum
+        self._enc_accum = 0
+        machine.enable_irq(irq_state)
 
         emitted = None
-        while self._enc_accum >= self.steps_per_detent:
-            self._enc_accum -= self.steps_per_detent
-            emitted = self.on_rotate("Right")
-            self._enc_last_publish_ms = now_ms
 
-        while self._enc_accum <= -self.steps_per_detent:
-            self._enc_accum += self.steps_per_detent
+        while accum >= self.steps_per_detent:
+            accum -= self.steps_per_detent
+            emitted = self.on_rotate("Right")
+
+        while accum <= -self.steps_per_detent:
+            accum += self.steps_per_detent
             emitted = self.on_rotate("Left")
-            self._enc_last_publish_ms = now_ms
+
+        if accum != 0:
+            irq_state = machine.disable_irq()
+            self._enc_accum += accum
+            machine.enable_irq(irq_state)
 
         return emitted
 
-    def handle_button(self, now_ms: int):
-        raw = self.pin_button.value()
-
-        if raw != self._btn_raw_last:
-            self._btn_raw_last = raw
-            self._btn_raw_change_ms = now_ms
+    def handle_button(self):
+        now_ms = time.ticks_ms()
+        raw = self._btn_raw_last
 
         emitted = None
 
@@ -165,4 +173,8 @@ class EncoderButton:
 
         return emitted
 
-
+    def deinit(self):
+        if self.encoder_enabled:
+            self.pin_encoder_clk.irq(handler=None)
+            self.pin_encoder_dt.irq(handler=None)
+        self.pin_button.irq(handler=None)

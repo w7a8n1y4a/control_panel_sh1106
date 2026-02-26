@@ -13,7 +13,7 @@ frame_count = 0
 FULL_FRAME_TOPICS = ()
 _controller = None
 
-ENCODER_POLL_MS = 1
+ENCODER_POLL_MS = 10
 
 
 def parse_i2c_address(value):
@@ -67,17 +67,16 @@ def init_encoder(client):
         button_debounce_ms=int(client.settings.BUTTON_DEBOUNCE_TIME),
         button_double_click_ms=int(client.settings.BUTTON_DOUBLE_CLICK_TIME),
         button_long_press_ms=int(client.settings.BUTTON_LONG_PRESS_TIME),
-        encoder_debounce_ms=int(client.settings.ENCODER_DEBOUNCE_TIME),
+        steps_per_detent=int(client.settings.ENCODER_STEPS_PER_DETENT),
         on_button=on_button,
         on_rotate=on_rotate,
     )
 
 
-async def _encoder_poll_task(client, controller):
+async def _encoder_poll_task(controller):
     while True:
-        now_ms = client.time_manager.get_epoch_ms()
-        controller.handle_encoder(now_ms)
-        controller.handle_button(now_ms)
+        controller.handle_encoder()
+        controller.handle_button()
         await asyncio.sleep_ms(ENCODER_POLL_MS)
 
 
@@ -128,7 +127,7 @@ async def main_async(client: PepeunitClient):
     if client.settings.FF_ENCODER_ENABLE:
         gc.collect()
         _controller = init_encoder(client)
-        asyncio.create_task(_encoder_poll_task(client, _controller))
+        asyncio.create_task(_encoder_poll_task(_controller))
 
     gc.collect()
     await client.run_main_cycle(100)

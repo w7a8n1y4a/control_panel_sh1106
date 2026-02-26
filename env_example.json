@@ -13,7 +13,7 @@
     "BUTTON_DEBOUNCE_TIME": 20,
     "BUTTON_DOUBLE_CLICK_TIME": 250,
     "BUTTON_LONG_PRESS_TIME": 400,
-    "ENCODER_DEBOUNCE_TIME": 20,
+    "ENCODER_STEPS_PER_DETENT": 4,
     "PUC_WIFI_SSID": "ssid",
     "PUC_WIFI_PASS": "password",
     "PU_DOMAIN": "unit.example.com",

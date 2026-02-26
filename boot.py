@@ -6,10 +6,6 @@ import uasyncio as asyncio
 
 from pepeunit_micropython_client.client import PepeunitClient
 
-import machine
-
-
-machine.freq(160000000)
 
 print('\nRun init PepeunitClient')
 

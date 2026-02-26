@@ -136,9 +136,13 @@ async def main_async(client: PepeunitClient):
 
 if __name__ == '__main__':
     try:
+        freq = client.settings.FREQ
+        machine.freq(freq)
         asyncio.run(main_async(client))
     except KeyboardInterrupt:
         raise
     except Exception as e:
+        if getattr(e, 'errno', None) == 19:
+            raise
         client.logger.critical("Error with reset: {}".format(e), file_only=True)
         client.restart_device()

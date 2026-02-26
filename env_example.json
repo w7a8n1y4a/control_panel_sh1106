@@ -1,4 +1,5 @@
 {
+    "FREQ": 160000000,
     "FF_ENCODER_ENABLE": false,
     "PIN_SCL": 5,
     "PIN_SDA": 4,

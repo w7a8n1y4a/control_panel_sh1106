@@ -18,6 +18,7 @@ authors = [
 
 
 [images]
+example = "https://minio.pepemoss.com/public-data/video/base64_streaming.mp4"
 schema = "https://minio.pepemoss.com/public-data/image/control_panel_sh1106.png"
 
 [physical_io]

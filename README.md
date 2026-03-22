@@ -13,7 +13,7 @@ Authors | Ivan Serebrennikov <admin@silberworks.com>
 
 ## Example
 
-<div align="center"><video align="center" src="https://minio.pepemoss.com/public-data/video/base64_streaming.mp4"></div>
+<div align="center"><video controls width="600" src="https://minio.pepemoss.com/public-data/video/base64_streaming.mp4"></div>
 
 ## Schema
 

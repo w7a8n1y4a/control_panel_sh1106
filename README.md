@@ -13,7 +13,7 @@ Authors | Ivan Serebrennikov <admin@silberworks.com>
 
 ## Example
 
-[![Watch Video](https://img.youtube.com/vi/r1CpkXD_MJY/0.jpg)](https://www.youtube.com/watch?v=r1CpkXD_MJY)
+![](https://www.youtube.com/watch?v=r1CpkXD_MJY)
 
 ## Schema
 

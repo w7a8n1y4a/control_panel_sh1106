@@ -13,6 +13,12 @@ Authors | Ivan Serebrennikov <admin@silberworks.com>
 
 ## Example
 
+<div align="center">
+  <a href="https://minio.pepemoss.com/public-data/video/base64_streaming.mp4">
+    <img src="https://minio.pepemoss.com/public-data/video/base64_streaming_prev.jpg" width="600">
+  </a>
+</div>
+
 <div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/video/base64_streaming.mp4"></div>
 
 ## Schema

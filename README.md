@@ -19,6 +19,16 @@ Authors | Ivan Serebrennikov <admin@silberworks.com>
 
 <div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/image/control_panel_sh1106.png"></div>
 
+## Files
+
+1. [Модель v3, капсулы](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_insert.stl)
+2. [Модель v3, блока для sh1106](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_panel.stl)
+3. [Модель v3, блока энкодера](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_encoder.stl)
+4. [Модель v3, блока esp32s3 zero](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32s3_zero.stl)
+5. [Модель v3, блока esp32c3 super mini](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32с3_super_mini.stl)
+6. [Модель v3, блока (esp8266) wemos d1 mini](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl)
+7. [Модель v3, внешней оболочки капсулы](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_casing.stl)
+
 ## Physical IO
 
 - `client.settings.PIN_SCL` - Вывод `SCL` шины `I2C` для дисплея

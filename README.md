@@ -12,7 +12,7 @@ License | AGPL v3 License
 Authors | Ivan Serebrennikov <admin@silberworks.com>
 
 ## Example
-[![Watch Demo ▶️](https://img.youtube.com/vi/r1CpkXD_MJY/0.jpg)](https://www.youtube.com/watch?v=r1CpkXD_MJY)
+[![Watch Demo ▶️](https://minio.pepemoss.com/public-data/video/base64_streaming_prev.jpg)](https://www.youtube.com/watch?v=r1CpkXD_MJY)
 
 ## Schema
 

@@ -13,19 +13,22 @@ authors = [
     {name = "Ivan Serebrennikov", email = "admin@silberworks.com"}
 ]
 
+[video]
+video = {preview = "https://minio.pepemoss.com/public-data/video/base64_streaming_prev.jpg", link = "https://www.youtube.com/watch?v=r1CpkXD_MJY"}
 
 [images]
-example = "https://minio.pepemoss.com/public-data/video/base64_streaming.mp4"
 schema = "https://minio.pepemoss.com/public-data/image/control_panel_sh1106.png"
 
-[files]
-"Модель v3, капсулы" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_insert.stl"
-"Модель v3, блока для sh1106" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_panel.stl"
-"Модель v3, блока энкодера" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_encoder.stl"
-"Модель v3, блока esp32s3 zero" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32s3_zero.stl"
-"Модель v3, блока esp32c3 super mini" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32с3_super_mini.stl"
-"Модель v3, блока (esp8266) wemos d1 mini" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl"
-"Модель v3, внешней оболочки капсулы" = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_casing.stl"
+[models]
+models = [
+  {version = "v3", description = "Внутреняя капсула", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_insert.stl"},
+  {version = "v3", description = "Блок экрана sh1106", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_panel.stl"},
+  {version = "v3", description = "Блок энкодера KY-040", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_encoder.stl"},
+  {version = "v3", description = "Блок esp32s3 zero", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32s3_zero.stl"},
+  {version = "v3", description = "Блок esp32c3 super mini", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32с3_super_mini.stl"},
+  {version = "v3", description = "Блок (esp8266) wemos d1 mini", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl"},
+  {version = "v3", description = "Внешняя капсула", link = "https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_casing.stl"},
+]
 
 [physical_io]
 "client.settings.PIN_SCL" = "Вывод `SCL` шины `I2C` для дисплея"

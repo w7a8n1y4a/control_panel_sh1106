@@ -4,62 +4,71 @@ Parameter | Implementation
 -- | --
 Description | Принимает base64-кодированные кадры по `MQTT` и отображает их на `OLED` дисплее `SH1106` через `I2C`. Опционально поддерживает энкодер с кнопкой для публикации действий в топик `encoder_action/pepeunit`
 Lang | `Micropython`
-Hardware | `esp32`, `esp32c3`, `esp32s3`, `esp8266`, `SH1106`, `KY-040`, `encoder`, `button`
+Hardware | `esp32c3`, `esp32s3`, `esp8266`, `SH1106`, `KY-040`, `encoder`, `button`
 Firmware | [RELEASE-1.1.1](https://git.pepemoss.com/pepe/pepeunit/libs/pepeunit_micropython_client/-/releases/1.1.1)
 Stack | `pepeunit_micropython_client`
 Version | 1.1.1
 License | AGPL v3 License
 Authors | Ivan Serebrennikov <admin@silberworks.com>
 
-## Example
-[![Watch Demo ▶️](https://minio.pepemoss.com/public-data/video/base64_streaming_prev.jpg)](https://www.youtube.com/watch?v=r1CpkXD_MJY)
+## Video
+
+[![video](https://minio.pepemoss.com/public-data/video/base64_streaming_prev.jpg)](https://www.youtube.com/watch?v=r1CpkXD_MJY)
 
 ## Schema
 
 <div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/image/control_panel_sh1106.png"></div>
 
-## Files
+## Models
 
-1. [Модель v3, капсулы](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_insert.stl)
-2. [Модель v3, блока для sh1106](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_panel.stl)
-3. [Модель v3, блока энкодера](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_encoder.stl)
-4. [Модель v3, блока esp32s3 zero](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32s3_zero.stl)
-5. [Модель v3, блока esp32c3 super mini](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32с3_super_mini.stl)
-6. [Модель v3, блока (esp8266) wemos d1 mini](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl)
-7. [Модель v3, внешней оболочки капсулы](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_casing.stl)
+Version | Description | Link
+-- | -- | --
+v3 | Внутреняя капсула | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_insert.stl)
+v3 | Блок экрана sh1106 | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_panel.stl)
+v3 | Блок энкодера KY-040 | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_encoder.stl)
+v3 | Блок esp32s3 zero | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32s3_zero.stl)
+v3 | Блок esp32c3 super mini | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32с3_super_mini.stl)
+v3 | Блок (esp8266) wemos d1 mini | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl)
+v3 | Внешняя капсула | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_casing.stl)
 
 ## Physical IO
 
-- `client.settings.PIN_SCL` - Вывод `SCL` шины `I2C` для дисплея
-- `client.settings.PIN_SDA` - Вывод `SDA` шины `I2C` для дисплея
-- `client.settings.PIN_BUTTON` - Вывод кнопки (работает только при `FF_ENCODER_ENABLE` = `true`)
-- `client.settings.PIN_ENCODER_CLK` - Вывод `CLK` энкодера (работает только при `FF_ENCODER_ENABLE` = `true`)
-- `client.settings.PIN_ENCODER_DT` - Вывод `DT` энкодера (работает только при `FF_ENCODER_ENABLE` = `true`)
+Key | Description
+-- | --
+`client.settings.PIN_SCL` | Вывод `SCL` шины `I2C` для дисплея
+`client.settings.PIN_SDA` | Вывод `SDA` шины `I2C` для дисплея
+`client.settings.PIN_BUTTON` | Вывод кнопки (работает только при `FF_ENCODER_ENABLE` = `true`)
+`client.settings.PIN_ENCODER_CLK` | Вывод `CLK` энкодера (работает только при `FF_ENCODER_ENABLE` = `true`)
+`client.settings.PIN_ENCODER_DT` | Вывод `DT` энкодера (работает только при `FF_ENCODER_ENABLE` = `true`)
 
 ## Env variable assignment
 
-1. `FREQ` - Частота процессора в Гц
-2. `FF_ENCODER_ENABLE` - Включить энкодер: `true` или `false`
-3. `PIN_SCL` - Номер пина `SCL` шины `I2C`
-4. `PIN_SDA` - Номер пина `SDA` шины `I2C`
-5. `I2C_FREQUENCY` - Частота шины I2C в Гц
-6. `I2C_ADDRESS` - I2C адрес дисплея в формате `"0x3c"`
-7. `DISPLAY_WIDTH` - Ширина дисплея в пикселях
-8. `DISPLAY_HEIGHT` - Высота дисплея в пикселях
-9. `PIN_BUTTON` - Номер пина кнопки
-10. `PIN_ENCODER_CLK` - Номер пина `CLK` энкодера
-11. `PIN_ENCODER_DT` - Номер пина `DT` энкодера
-12. `BUTTON_DEBOUNCE_TIME` - Время антидребезга кнопки в миллисекундах
-13. `BUTTON_DOUBLE_CLICK_TIME` - Окно для двойного клика в миллисекундах
-14. `BUTTON_LONG_PRESS_TIME` - Время долгого нажатия в миллисекундах
-15. `ENCODER_STEPS_PER_DETENT` - Количество шагов энкодера на один щелчок
-16. `PUC_WIFI_SSID` - Имя сети `WiFi`
-17. `PUC_WIFI_PASS` - Пароль от сети `WiFi`
+Variable | Description
+-- | --
+`FREQ` | Частота процессора в Гц
+`FF_ENCODER_ENABLE` | Включить энкодер: `true` или `false`
+`PIN_SCL` | Номер пина `SCL` шины `I2C`
+`PIN_SDA` | Номер пина `SDA` шины `I2C`
+`I2C_FREQUENCY` | Частота шины I2C в Гц
+`I2C_ADDRESS` | I2C адрес дисплея в формате `"0x3c"`
+`DISPLAY_WIDTH` | Ширина дисплея в пикселях
+`DISPLAY_HEIGHT` | Высота дисплея в пикселях
+`PIN_BUTTON` | Номер пина кнопки
+`PIN_ENCODER_CLK` | Номер пина `CLK` энкодера
+`PIN_ENCODER_DT` | Номер пина `DT` энкодера
+`BUTTON_DEBOUNCE_TIME` | Время антидребезга кнопки в миллисекундах
+`BUTTON_DOUBLE_CLICK_TIME` | Окно для двойного клика в миллисекундах
+`BUTTON_LONG_PRESS_TIME` | Время долгого нажатия в миллисекундах
+`ENCODER_STEPS_PER_DETENT` | Количество шагов энкодера на один щелчок
+`PUC_WIFI_SSID` | Имя сети `WiFi`
+`PUC_WIFI_PASS` | Пароль от сети `WiFi`
 
 ## Assignment of Device Topics
 
-- `full_frame/pepeunit` - Принимает base64-кодированный кадр (входящий) для отображения на дисплее `SH1106`
-- `encoder_action/pepeunit` - Отправляет действие энкодера текстом: `One`, `Double`, `Long` (кнопка) или `Right`, `Left` (вращение)
+Topic | Description
+-- | --
+`full_frame/pepeunit` | Принимает base64-кодированный кадр (входящий) для отображения на дисплее `SH1106`
+`encoder_action/pepeunit` | Отправляет действие энкодера текстом: `One`, `Double`, `Long` (кнопка) или `Right`, `Left` (вращение)
 
 ## Work algorithm
 

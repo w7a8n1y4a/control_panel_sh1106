@@ -34,7 +34,6 @@ def init_display(client):
             client.settings.DISPLAY_WIDTH,
             client.settings.DISPLAY_HEIGHT,
             i2c,
-            machine.Pin(16),
             addr=parse_i2c_address(client.settings.I2C_ADDRESS)
         )
 

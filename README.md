@@ -2,9 +2,9 @@
 
 Parameter | Implementation
 -- | --
-Description | Принимает base64-кодированные кадры по `MQTT` и отображает их на `OLED` дисплее `SH1106` через `I2C`. Опционально поддерживает энкодер с кнопкой для публикации действий в топик `encoder_action/pepeunit`
+Description | Принимает base64-кодированные кадры по `MQTT` и отображает их на `OLED` дисплее `SH1106 1.3"` через `I2C`. Опционально поддерживает энкодер с кнопкой для публикации действий в топик `encoder_action/pepeunit`
 Lang | `Micropython`
-Hardware | `esp32c3`, `esp32s3`, `esp8266`, `SH1106`, `KY-040`, `encoder`, `button`
+Hardware | `esp32c3`, `esp32s3`, `esp8266 (unstable)`, `SH1106 1.3"`, `KY-040`, `encoder`, `button`
 Firmware | [RELEASE-1.1.1](https://git.pepemoss.com/pepe/pepeunit/libs/pepeunit_micropython_client/-/releases/1.1.1)
 Stack | `pepeunit_micropython_client`
 Version | 1.1.1
@@ -15,9 +15,17 @@ Authors | Ivan Serebrennikov <admin@silberworks.com>
 
 [![video](https://minio.pepemoss.com/public-data/video/base64_streaming_prev.jpg)](https://www.youtube.com/watch?v=r1CpkXD_MJY)
 
-## Schema
+## Schema esp32s3 zero
 
-<div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/image/control_panel_sh1106.png"></div>
+<div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/schema/control_panel_sh1106_esp32s3_zero.png"></div>
+
+## Schema esp32c3 super mini
+
+<div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/schema/control_panel_sh1106_esp32c3_super_mini.png"></div>
+
+## Schema esp8266 wemos d1 mini
+
+<div align="center"><img align="center" src="https://minio.pepemoss.com/public-data/schema/control_panel_sh1106_esp8266_wemos_d1_mini.png"></div>
 
 ## Models
 
@@ -28,7 +36,7 @@ v3 | Блок экрана sh1106 | [link](https://minio.pepemoss.com/public-dat
 v3 | Блок энкодера KY-040 | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_encoder.stl)
 v3 | Блок esp32s3 zero | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32s3_zero.stl)
 v3 | Блок esp32c3 super mini | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_esp32с3_super_mini.stl)
-v3 | Блок (esp8266) wemos d1 mini | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl)
+v3 | Блок esp8266 wemos d1 mini | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_mc_wemos_d1_minii.stl)
 v3 | Внешняя капсула | [link](https://minio.pepemoss.com/public-data/model/control_panel_sh1106/v3/stl/capsule_casing.stl)
 
 ## Physical IO
@@ -80,7 +88,9 @@ Topic | Description
 6. Подписка на входящие `MQTT` топики
 7. При получении сообщения в `full_frame/pepeunit`: декодирование `base64` и отрисовка кадра на дисплее
 8. При нажатии кнопки или вращении энкодера: публикация действия в `encoder_action/pepeunit` (`One`, `Double`, `Long`, `Right`, `Left`)
-9. Для `esp8266` рекомендуется использовать `FF_ENCODER_ENABLE` = `false`, а также частоту кристалла `160000000`, при этом ограничив `fps` источника кадров `10 fps`
+9. `env_example.json` по умолчанию настроен на `esp32s3 zero`
+10. `esp32c3 super mini` имеет потолок частоты `FREQ` = `160000000`
+11. `esp8266 wemos d1 mini` работает нестабильно и может перезапускаться в процессе. Рекомендуется использовать `FF_ENCODER_ENABLE` = `false`, а также частоту кристалла `FREQ` = `160000000`, при этом ограничив `fps` источника кадров `< 10 fps`, нестабильность скорее всего останется
 
 ## Installation
 
